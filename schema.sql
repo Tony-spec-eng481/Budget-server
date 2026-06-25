@@ -82,3 +82,18 @@ CREATE INDEX IF NOT EXISTS idx_products_search ON products(name, category);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
 
+-- Orders
+CREATE TABLE IF NOT EXISTS orders (
+  id VARCHAR(100) PRIMARY KEY,
+  list_id VARCHAR(100) NOT NULL REFERENCES shopping_lists(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  supermarket VARCHAR(100) NOT NULL,
+  total_amount NUMERIC(15, 2) NOT NULL,
+  payment_status VARCHAR(50) NOT NULL DEFAULT 'pending', -- 'pending', 'paid'
+  payment_method VARCHAR(50),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_list ON orders(list_id);

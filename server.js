@@ -12,6 +12,7 @@ const stocksController = require('./controllers/stocks');
 const supermarketsController = require('./controllers/supermarkets');
 const budgetsController = require('./controllers/budgets');
 const shoppingController = require('./controllers/shopping');
+const ordersController = require('./controllers/orders');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -52,6 +53,11 @@ app.get('/api/shopping-lists/:id/items', authMiddleware, shoppingController.getL
 app.post('/api/shopping-lists/:id/items', authMiddleware, shoppingController.addItem);
 app.put('/api/shopping-lists/items/:itemId', authMiddleware, shoppingController.updateItem);
 app.delete('/api/shopping-lists/items/:itemId', authMiddleware, shoppingController.deleteItem);
+
+// 7. Orders routes (Secured)
+app.get('/api/orders', authMiddleware, ordersController.getOrders);
+app.post('/api/orders', authMiddleware, ordersController.createOrder);
+app.post('/api/orders/:id/pay', authMiddleware, ordersController.payOrder);
 
 // Root path diagnostic route
 app.get('/', (req, res) => {
