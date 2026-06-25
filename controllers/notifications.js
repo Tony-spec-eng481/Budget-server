@@ -1,15 +1,26 @@
 const db = require('../db');
 
-// Get all notifications for the logged-in user
+// Get all notifications for the logged-in user, including global promotions!
 exports.getNotifications = async (req, res) => {
   const userId = req.user.id;
   try {
-    const result = await db.query(
-      'SELECT id, title, body, type, is_read AS "isRead", created_at AS "createdAt" FROM notifications WHERE user_id = $1 ORDER BY created_at DESC',
+    // 1. Fetch user-specific notifications
+    const userResult = await db.query(
+      'SELECT id, title, body, type, is_read AS "isRead", created_at AS "createdAt" FROM notifications WHERE user_id = $1',
       [userId]
     );
-    // Format to match SQLite model (e.g. timestamp as number, isRead as boolean)
-    const formatted = result.rows.map(n => ({
+    
+    // 2. Fetch all global promotions and left join read_promotions to check if this user has read them
+    const promoResult = await db.query(
+      `SELECT p.id, p.title, p.body, p.created_at AS "createdAt",
+              CASE WHEN rp.user_id IS NOT NULL THEN TRUE ELSE FALSE END AS "isRead"
+       FROM promotions p
+       LEFT JOIN read_promotions rp ON p.id = rp.promotion_id AND rp.user_id = $1`,
+      [userId]
+    );
+
+    // Format and combine
+    const formattedUserNotifs = userResult.rows.map(n => ({
       id: n.id,
       title: n.title,
       body: n.body,
@@ -17,7 +28,18 @@ exports.getNotifications = async (req, res) => {
       timestamp: new Date(n.createdAt).getTime(),
       isRead: n.isRead
     }));
-    return res.json(formatted);
+
+    const formattedPromos = promoResult.rows.map(p => ({
+      id: p.id,
+      title: p.title,
+      body: p.body,
+      type: 'promotional',
+      timestamp: new Date(p.createdAt).getTime(),
+      isRead: p.isRead
+    }));
+
+    const combined = [...formattedUserNotifs, ...formattedPromos].sort((a, b) => b.timestamp - a.timestamp);
+    return res.json(combined);
   } catch (error) {
     console.error('getNotifications error:', error);
     return res.status(500).json({ error: 'Failed to retrieve notifications.' });
@@ -51,10 +73,21 @@ exports.markRead = async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
   try {
-    await db.query(
-      'UPDATE notifications SET is_read = TRUE WHERE id = $1 AND user_id = $2',
-      [id, userId]
-    );
+    if (id.startsWith('promo_')) {
+      // It's a global promotion. Insert a read tracking record for this user.
+      await db.query(
+        `INSERT INTO read_promotions (user_id, promotion_id)
+         VALUES ($1, $2)
+         ON CONFLICT DO NOTHING`,
+        [userId, id]
+      );
+    } else {
+      // It's a standard user notification.
+      await db.query(
+        'UPDATE notifications SET is_read = TRUE WHERE id = $1 AND user_id = $2',
+        [id, userId]
+      );
+    }
     return res.json({ success: true });
   } catch (error) {
     console.error('markRead error:', error);

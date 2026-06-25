@@ -3,7 +3,7 @@ const db = require('../db');
 exports.getProducts = async (req, res) => {
   try {
     const { query } = req.query;
-    if (query && query.trim().length >= 2) {
+    if (query && query.trim().length >= 1) {
       const normalizedQuery = query.toLowerCase().trim();
       const tokens = normalizedQuery.split(/\s+/);
       

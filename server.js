@@ -17,6 +17,8 @@ const receiptsController = require('./controllers/receipts');
 const notificationsController = require('./controllers/notifications');
 const adminController = require('./controllers/admin');
 const adminAuthMiddleware = require('./middleware/adminAuth');
+const promotionsController = require('./controllers/promotions');
+const globalSettingsController = require('./controllers/globalSettings');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -74,11 +76,23 @@ app.put('/api/notifications/read-all', authMiddleware, notificationsController.m
 app.delete('/api/notifications/:id', authMiddleware, notificationsController.deleteNotification);
 app.delete('/api/notifications', authMiddleware, notificationsController.clearAllNotifications);
 
+// 9b. Promotions & Global Settings routes (Secured)
+app.get('/api/promotions', authMiddleware, promotionsController.getActivePromotions);
+app.get('/api/global-settings', globalSettingsController.getSettings);
+
 // 10. Admin Portal routes
 app.post('/api/admin/auth/login', adminController.adminLogin);
 app.get('/api/admin/stats', adminAuthMiddleware, adminController.getStats);
 app.get('/api/admin/users', adminAuthMiddleware, adminController.getUsers);
 app.delete('/api/admin/users/:id', adminAuthMiddleware, adminController.deleteUser);
+
+app.get('/api/admin/promotions', adminAuthMiddleware, promotionsController.getPromotions);
+app.post('/api/admin/promotions', adminAuthMiddleware, promotionsController.addPromotion);
+app.put('/api/admin/promotions/:id', adminAuthMiddleware, promotionsController.updatePromotion);
+app.delete('/api/admin/promotions/:id', adminAuthMiddleware, promotionsController.deletePromotion);
+
+app.get('/api/admin/global-settings', adminAuthMiddleware, globalSettingsController.getGlobalSettings);
+app.put('/api/admin/global-settings', adminAuthMiddleware, globalSettingsController.updateGlobalSettings);
 
 app.get('/api/admin/products', adminAuthMiddleware, adminController.getProducts);
 app.post('/api/admin/products', adminAuthMiddleware, adminController.addProduct);

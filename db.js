@@ -93,6 +93,47 @@ async function seedDatabase() {
     await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS pickup_phone VARCHAR(50);');
     await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS pickup_time VARCHAR(50);');
 
+    // Add promotions, read_promotions, and global_settings tables
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS promotions (
+        id VARCHAR(100) PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        body TEXT NOT NULL,
+        image_url TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS read_promotions (
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        promotion_id VARCHAR(100) REFERENCES promotions(id) ON DELETE CASCADE,
+        PRIMARY KEY (user_id, promotion_id)
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS global_settings (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `);
+
+    // Seed default global settings if empty
+    const settingsCheck = await pool.query('SELECT COUNT(*) FROM global_settings');
+    if (parseInt(settingsCheck.rows[0].count, 10) === 0) {
+      console.log('Seeding default global settings...');
+      await pool.query(`
+        INSERT INTO global_settings (key, value) VALUES
+        ('sms_scanning_enabled', 'true'),
+        ('budget_alerts_enabled', 'true'),
+        ('stock_alerts_enabled', 'true'),
+        ('shopping_reminders_enabled', 'true'),
+        ('promotional_alerts_enabled', 'true')
+      `);
+      console.log('Default global settings seeded.');
+    }
+
     console.log('PostgreSQL migrations completed.');
 
     // Seed admin user

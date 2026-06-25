@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Supermarket Product Catalog
-DROP TABLE IF EXISTS products CASCADE;
 CREATE TABLE IF NOT EXISTS products (
   id VARCHAR(100) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -142,6 +141,28 @@ CREATE TABLE IF NOT EXISTS stock_news (
   sentiment_score NUMERIC(5, 2),
   banner_image TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Promotional Notifications
+CREATE TABLE IF NOT EXISTS promotions (
+  id VARCHAR(100) PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  body TEXT NOT NULL,
+  image_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Read Promotions tracking
+CREATE TABLE IF NOT EXISTS read_promotions (
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  promotion_id VARCHAR(100) REFERENCES promotions(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, promotion_id)
+);
+
+-- Global app settings
+CREATE TABLE IF NOT EXISTS global_settings (
+  key VARCHAR(100) PRIMARY KEY,
+  value TEXT NOT NULL
 );
 
 
