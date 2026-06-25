@@ -9,14 +9,13 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Supermarket Product Catalog
+DROP TABLE IF EXISTS products CASCADE;
 CREATE TABLE IF NOT EXISTS products (
   id VARCHAR(100) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   category VARCHAR(100) NOT NULL,
   quantity VARCHAR(50) NOT NULL,
-  price_naivas NUMERIC(10, 2) NOT NULL DEFAULT 0,
-  price_carrefour NUMERIC(10, 2) NOT NULL DEFAULT 0,
-  price_quickmart NUMERIC(10, 2) NOT NULL DEFAULT 0
+  price_magunas NUMERIC(10, 2) NOT NULL DEFAULT 0
 );
 
 -- Category-specific budgets

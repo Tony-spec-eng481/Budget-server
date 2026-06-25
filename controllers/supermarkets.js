@@ -20,16 +20,14 @@ exports.getProducts = async (req, res) => {
       sql += conditions.join(' AND ') + ' LIMIT 10';
       const result = await db.query(sql, params);
       
-      // Transform keys to match frontend Record format: prices: { Naivas, Carrefour, Quickmart }
+      // Transform keys to match frontend Record format: prices: { Magunas }
       const formatted = result.rows.map(row => ({
         id: row.id,
         name: row.name,
         category: row.category,
         quantity: row.quantity,
         prices: {
-          Naivas: parseFloat(row.price_naivas),
-          Carrefour: parseFloat(row.price_carrefour),
-          Quickmart: parseFloat(row.price_quickmart)
+          Magunas: parseFloat(row.price_magunas)
         }
       }));
       return res.json(formatted);
@@ -43,9 +41,7 @@ exports.getProducts = async (req, res) => {
       category: row.category,
       quantity: row.quantity,
       prices: {
-        Naivas: parseFloat(row.price_naivas),
-        Carrefour: parseFloat(row.price_carrefour),
-        Quickmart: parseFloat(row.price_quickmart)
+        Magunas: parseFloat(row.price_magunas)
       }
     }));
     return res.json(formatted);
