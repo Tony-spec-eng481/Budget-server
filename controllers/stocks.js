@@ -115,7 +115,7 @@ function parseKenyaQuotes(html) {
   if (!table3Match) return [];
 
   const tbody = table3Match[1];
-  const rows = tbody.split('<tr>');
+  const rows = tbody.split(/<tr[^>]*>/i);
 
   for (const row of rows) {
     if (!row.trim()) continue;
