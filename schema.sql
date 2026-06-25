@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  is_admin BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -112,8 +113,35 @@ CREATE TABLE IF NOT EXISTS receipts (
   items JSONB NOT NULL,
   total_amount NUMERIC(15, 2) NOT NULL,
   payment_method VARCHAR(50) NOT NULL,
+  status VARCHAR(50) NOT NULL DEFAULT 'pending',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_receipts_user ON receipts(user_id);
+
+-- Stock quotes table
+CREATE TABLE IF NOT EXISTS stock_quotes (
+  symbol VARCHAR(50) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  price NUMERIC(15, 2) NOT NULL DEFAULT 0,
+  change NUMERIC(15, 2) NOT NULL DEFAULT 0,
+  change_percent NUMERIC(15, 2) NOT NULL DEFAULT 0,
+  volume VARCHAR(50),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Stock news table
+CREATE TABLE IF NOT EXISTS stock_news (
+  id VARCHAR(100) PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  date VARCHAR(100) NOT NULL,
+  summary TEXT NOT NULL,
+  source VARCHAR(100) NOT NULL,
+  url TEXT,
+  sentiment VARCHAR(50),
+  sentiment_score NUMERIC(5, 2),
+  banner_image TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 

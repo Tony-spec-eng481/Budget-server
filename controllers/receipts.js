@@ -7,7 +7,7 @@ exports.getReceipts = async (req, res) => {
     const result = await db.query(
       `SELECT r.id, r.order_id AS "orderId", r.list_id AS "listId", r.company_name AS "companyName", 
               r.list_title AS "listTitle", r.items, r.total_amount AS "totalAmount", 
-              r.payment_method AS "paymentMethod", r.created_at AS "createdAt",
+              r.payment_method AS "paymentMethod", r.status, r.created_at AS "createdAt",
               o.supermarket_location AS "supermarketLocation", o.pickup_name AS "pickupName", 
               o.pickup_phone AS "pickupPhone", o.pickup_time AS "pickupTime" 
        FROM receipts r

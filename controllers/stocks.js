@@ -1,3 +1,5 @@
+const db = require('../db');
+
 const TRACKED_STOCKS = [
   'SCOM', // Safaricom PLC
   'EQTY', // Equity Group Holdings
@@ -207,32 +209,90 @@ function parseKenyaDiscussions(html) {
   return news;
 }
 
+// Centralized scraping helpers exported for admin sync reuse
+exports.scrapeQuotes = async () => {
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36'
+  };
+  const response = await fetch('https://afx.kwayisi.org/nse/', { headers });
+  if (!response.ok) {
+    return FALLBACK_QUOTES;
+  }
+
+  const html = await response.text();
+  const quotes = parseKenyaQuotes(html);
+
+  if (quotes.length === 0) {
+    return FALLBACK_QUOTES;
+  }
+
+  return quotes.sort((a, b) => {
+    const aTracked = TRACKED_STOCKS.indexOf(a.symbol);
+    const bTracked = TRACKED_STOCKS.indexOf(b.symbol);
+    if (aTracked !== -1 && bTracked !== -1) return aTracked - bTracked;
+    if (aTracked !== -1) return -1;
+    if (bTracked !== -1) return 1;
+    return 0;
+  });
+};
+
+exports.scrapeNews = async () => {
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36'
+  };
+  const response = await fetch('https://afx.kwayisi.org/nse/', { headers });
+  if (!response.ok) {
+    return FALLBACK_NEWS;
+  }
+
+  const html = await response.text();
+  const discussions = parseKenyaDiscussions(html);
+
+  if (discussions.length === 0) {
+    return FALLBACK_NEWS;
+  }
+
+  return discussions;
+};
+
 exports.getQuotes = async (req, res) => {
   try {
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36'
-    };
-    const response = await fetch('https://afx.kwayisi.org/nse/', { headers });
-    if (!response.ok) {
-      return res.json(FALLBACK_QUOTES);
+    // Attempt to fetch from database first
+    const dbResult = await db.query(
+      `SELECT symbol, name, price, change, change_percent AS "changePercent", volume, updated_at AS "updatedAt"
+       FROM stock_quotes 
+       ORDER BY 
+         CASE 
+           WHEN symbol = 'SCOM' THEN 1
+           WHEN symbol = 'EQTY' THEN 2
+           WHEN symbol = 'KCB' THEN 3
+           WHEN symbol = 'COOP' THEN 4
+           WHEN symbol = 'EABL' THEN 5
+           WHEN symbol = 'BAT' THEN 6
+           WHEN symbol = 'ABSA' THEN 7
+           WHEN symbol = 'KPLC' THEN 8
+           WHEN symbol = 'KEGN' THEN 9
+           WHEN symbol = 'SCAN' THEN 10
+           ELSE 11
+         END ASC, symbol ASC`
+    );
+
+    if (dbResult.rows.length > 0) {
+      // Cast price, change, changePercent to numbers
+      const formattedQuotes = dbResult.rows.map(q => ({
+        symbol: q.symbol,
+        name: q.name,
+        price: parseFloat(q.price),
+        change: parseFloat(q.change),
+        changePercent: parseFloat(q.changePercent),
+        volume: q.volume
+      }));
+      return res.json(formattedQuotes);
     }
 
-    const html = await response.text();
-    const quotes = parseKenyaQuotes(html);
-
-    if (quotes.length === 0) {
-      return res.json(FALLBACK_QUOTES);
-    }
-
-    quotes.sort((a, b) => {
-      const aTracked = TRACKED_STOCKS.indexOf(a.symbol);
-      const bTracked = TRACKED_STOCKS.indexOf(b.symbol);
-      if (aTracked !== -1 && bTracked !== -1) return aTracked - bTracked;
-      if (aTracked !== -1) return -1;
-      if (bTracked !== -1) return 1;
-      return 0;
-    });
-
+    // Fallback to scrape if DB is empty
+    console.log('Stock quotes DB is empty. Scraping live data...');
+    const quotes = await exports.scrapeQuotes();
     return res.json(quotes);
   } catch (error) {
     console.error('getQuotes error:', error);
@@ -242,21 +302,31 @@ exports.getQuotes = async (req, res) => {
 
 exports.getNews = async (req, res) => {
   try {
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36'
-    };
-    const response = await fetch('https://afx.kwayisi.org/nse/', { headers });
-    if (!response.ok) {
-      return res.json(FALLBACK_NEWS);
+    // Attempt to fetch from database first
+    const dbResult = await db.query(
+      `SELECT id, title, date, summary, source, url, sentiment, sentiment_score AS "sentimentScore", banner_image AS "bannerImage"
+       FROM stock_news 
+       ORDER BY created_at DESC`
+    );
+
+    if (dbResult.rows.length > 0) {
+      const formattedNews = dbResult.rows.map(n => ({
+        id: n.id,
+        title: n.title,
+        date: n.date,
+        summary: n.summary,
+        source: n.source,
+        url: n.url,
+        sentiment: n.sentiment,
+        sentimentScore: parseFloat(n.sentimentScore || 0),
+        banner_image: n.bannerImage
+      }));
+      return res.json(formattedNews);
     }
 
-    const html = await response.text();
-    const discussions = parseKenyaDiscussions(html);
-
-    if (discussions.length === 0) {
-      return res.json(FALLBACK_NEWS);
-    }
-
+    // Fallback to scrape if DB is empty
+    console.log('Stock news DB is empty. Scraping live discussions...');
+    const discussions = await exports.scrapeNews();
     return res.json(discussions);
   } catch (error) {
     console.error('getNews error:', error);

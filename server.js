@@ -14,6 +14,9 @@ const budgetsController = require('./controllers/budgets');
 const shoppingController = require('./controllers/shopping');
 const ordersController = require('./controllers/orders');
 const receiptsController = require('./controllers/receipts');
+const notificationsController = require('./controllers/notifications');
+const adminController = require('./controllers/admin');
+const adminAuthMiddleware = require('./middleware/adminAuth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -62,6 +65,40 @@ app.post('/api/orders/:id/pay', authMiddleware, ordersController.payOrder);
 
 // 8. Receipts routes (Secured)
 app.get('/api/receipts', authMiddleware, receiptsController.getReceipts);
+
+// 9. Notifications routes (Secured)
+app.get('/api/notifications', authMiddleware, notificationsController.getNotifications);
+app.post('/api/notifications', authMiddleware, notificationsController.addNotification);
+app.put('/api/notifications/:id/read', authMiddleware, notificationsController.markRead);
+app.put('/api/notifications/read-all', authMiddleware, notificationsController.markAllRead);
+app.delete('/api/notifications/:id', authMiddleware, notificationsController.deleteNotification);
+app.delete('/api/notifications', authMiddleware, notificationsController.clearAllNotifications);
+
+// 10. Admin Portal routes
+app.post('/api/admin/auth/login', adminController.adminLogin);
+app.get('/api/admin/stats', adminAuthMiddleware, adminController.getStats);
+app.get('/api/admin/users', adminAuthMiddleware, adminController.getUsers);
+app.delete('/api/admin/users/:id', adminAuthMiddleware, adminController.deleteUser);
+
+app.get('/api/admin/products', adminAuthMiddleware, adminController.getProducts);
+app.post('/api/admin/products', adminAuthMiddleware, adminController.addProduct);
+app.put('/api/admin/products/:id', adminAuthMiddleware, adminController.updateProduct);
+app.delete('/api/admin/products/:id', adminAuthMiddleware, adminController.deleteProduct);
+
+app.get('/api/admin/receipts', adminAuthMiddleware, adminController.getReceipts);
+app.put('/api/admin/receipts/:id/status', adminAuthMiddleware, adminController.updateReceiptStatus);
+app.delete('/api/admin/receipts/:id', adminAuthMiddleware, adminController.deleteReceipt);
+
+app.get('/api/admin/stocks/quotes', adminAuthMiddleware, adminController.getStockQuotes);
+app.post('/api/admin/stocks/quotes', adminAuthMiddleware, adminController.addStockQuote);
+app.put('/api/admin/stocks/quotes/:symbol', adminAuthMiddleware, adminController.updateStockQuote);
+app.delete('/api/admin/stocks/quotes/:symbol', adminAuthMiddleware, adminController.deleteStockQuote);
+
+app.get('/api/admin/stocks/news', adminAuthMiddleware, adminController.getStockNews);
+app.post('/api/admin/stocks/news', adminAuthMiddleware, adminController.addStockNews);
+app.put('/api/admin/stocks/news/:id', adminAuthMiddleware, adminController.updateStockNews);
+app.delete('/api/admin/stocks/news/:id', adminAuthMiddleware, adminController.deleteStockNews);
+app.post('/api/admin/stocks/sync', adminAuthMiddleware, adminController.syncLiveStocks);
 
 // Root path diagnostic route
 app.get('/', (req, res) => {
