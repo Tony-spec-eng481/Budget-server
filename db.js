@@ -94,6 +94,30 @@ async function seedDatabase() {
     `);
     await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);');
+    
+    // Create receipts table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS receipts (
+        id VARCHAR(100) PRIMARY KEY,
+        order_id VARCHAR(100) NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        list_id VARCHAR(100) NOT NULL REFERENCES shopping_lists(id) ON DELETE CASCADE,
+        company_name VARCHAR(100) NOT NULL DEFAULT 'BudgetTrack',
+        list_title VARCHAR(255) NOT NULL,
+        items JSONB NOT NULL,
+        total_amount NUMERIC(15, 2) NOT NULL,
+        payment_method VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_receipts_user ON receipts(user_id);');
+
+    // Add supermarket_location and pickup details columns to orders table
+    await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS supermarket_location VARCHAR(255);');
+    await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS pickup_name VARCHAR(255);');
+    await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS pickup_phone VARCHAR(50);');
+    await pool.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS pickup_time VARCHAR(50);');
+
     console.log('PostgreSQL migrations completed.');
 
     const res = await pool.query('SELECT COUNT(*) FROM products');

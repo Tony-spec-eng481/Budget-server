@@ -13,6 +13,7 @@ const supermarketsController = require('./controllers/supermarkets');
 const budgetsController = require('./controllers/budgets');
 const shoppingController = require('./controllers/shopping');
 const ordersController = require('./controllers/orders');
+const receiptsController = require('./controllers/receipts');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -58,6 +59,9 @@ app.delete('/api/shopping-lists/items/:itemId', authMiddleware, shoppingControll
 app.get('/api/orders', authMiddleware, ordersController.getOrders);
 app.post('/api/orders', authMiddleware, ordersController.createOrder);
 app.post('/api/orders/:id/pay', authMiddleware, ordersController.payOrder);
+
+// 8. Receipts routes (Secured)
+app.get('/api/receipts', authMiddleware, receiptsController.getReceipts);
 
 // Root path diagnostic route
 app.get('/', (req, res) => {

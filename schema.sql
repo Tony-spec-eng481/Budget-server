@@ -90,9 +90,30 @@ CREATE TABLE IF NOT EXISTS orders (
   total_amount NUMERIC(15, 2) NOT NULL,
   payment_status VARCHAR(50) NOT NULL DEFAULT 'pending', -- 'pending', 'paid'
   payment_method VARCHAR(50),
+  supermarket_location VARCHAR(255),
+  pickup_name VARCHAR(255),
+  pickup_phone VARCHAR(50),
+  pickup_time VARCHAR(50),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_list ON orders(list_id);
+
+-- Receipts
+CREATE TABLE IF NOT EXISTS receipts (
+  id VARCHAR(100) PRIMARY KEY,
+  order_id VARCHAR(100) NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  list_id VARCHAR(100) NOT NULL REFERENCES shopping_lists(id) ON DELETE CASCADE,
+  company_name VARCHAR(100) NOT NULL DEFAULT 'BudgetTrack',
+  list_title VARCHAR(255) NOT NULL,
+  items JSONB NOT NULL,
+  total_amount NUMERIC(15, 2) NOT NULL,
+  payment_method VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_receipts_user ON receipts(user_id);
+
