@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS shopping_lists (
   id VARCHAR(100) PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
+  shopping_date DATE,
   is_archived BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -62,8 +63,22 @@ CREATE TABLE IF NOT EXISTS shopping_items (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Notifications
+CREATE TABLE IF NOT EXISTS notifications (
+  id VARCHAR(100) PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  body TEXT NOT NULL,
+  type VARCHAR(50) NOT NULL, -- 'budget', 'stock', 'shopping'
+  is_read BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_budgets_user ON budgets(user_id);
 CREATE INDEX IF NOT EXISTS idx_shopping_lists_user ON shopping_lists(user_id);
 CREATE INDEX IF NOT EXISTS idx_shopping_items_list ON shopping_items(list_id);
 CREATE INDEX IF NOT EXISTS idx_products_search ON products(name, category);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+

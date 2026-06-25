@@ -9,7 +9,7 @@ exports.getLists = async (req, res) => {
   const userId = req.user.id;
   try {
     const result = await db.query(
-      'SELECT id, name, is_archived AS "isArchived", created_at AS "createdAt", updated_at AS "updatedAt" FROM shopping_lists WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT id, name, shopping_date AS "shoppingDate", is_archived AS "isArchived", created_at AS "createdAt", updated_at AS "updatedAt" FROM shopping_lists WHERE user_id = $1 ORDER BY created_at DESC',
       [userId]
     );
     return res.json(result.rows);
@@ -22,7 +22,7 @@ exports.getLists = async (req, res) => {
 // Create a shopping list
 exports.createList = async (req, res) => {
   const userId = req.user.id;
-  const { id, name } = req.body;
+  const { id, name, shoppingDate } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'List name is required.' });
   }
@@ -31,8 +31,8 @@ exports.createList = async (req, res) => {
 
   try {
     const result = await db.query(
-      'INSERT INTO shopping_lists (id, user_id, name) VALUES ($1, $2, $3) RETURNING id, name, is_archived AS "isArchived", created_at AS "createdAt", updated_at AS "updatedAt"',
-      [listId, userId, name]
+      'INSERT INTO shopping_lists (id, user_id, name, shopping_date) VALUES ($1, $2, $3, $4) RETURNING id, name, shopping_date AS "shoppingDate", is_archived AS "isArchived", created_at AS "createdAt", updated_at AS "updatedAt"',
+      [listId, userId, name, shoppingDate || null]
     );
     return res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -45,7 +45,7 @@ exports.createList = async (req, res) => {
 exports.updateList = async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
-  const { name, isArchived } = req.body;
+  const { name, shoppingDate, isArchived } = req.body;
 
   try {
     // Verify list belongs to user
@@ -62,6 +62,10 @@ exports.updateList = async (req, res) => {
       fields.push(`name = $${paramIndex++}`);
       values.push(name);
     }
+    if (shoppingDate !== undefined) {
+      fields.push(`shopping_date = $${paramIndex++}`);
+      values.push(shoppingDate || null);
+    }
     if (isArchived !== undefined) {
       fields.push(`is_archived = $${paramIndex++}`);
       values.push(isArchived);
@@ -72,7 +76,7 @@ exports.updateList = async (req, res) => {
     }
 
     values.push(id);
-    const sql = `UPDATE shopping_lists SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramIndex} RETURNING id, name, is_archived AS "isArchived", created_at AS "createdAt", updated_at AS "updatedAt"`;
+    const sql = `UPDATE shopping_lists SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramIndex} RETURNING id, name, shopping_date AS "shoppingDate", is_archived AS "isArchived", created_at AS "createdAt", updated_at AS "updatedAt"`;
     
     const result = await db.query(sql, values);
     return res.json(result.rows[0]);

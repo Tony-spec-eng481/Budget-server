@@ -2,7 +2,10 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL && (process.env.DATABASE_URL.includes('supabase.co') || process.env.DATABASE_URL.includes('supabase.com'))
+    ? { rejectUnauthorized: false }
+    : false
 });
 
 // Seed data from SupermarketService
@@ -65,6 +68,34 @@ const INITIAL_PRODUCTS = [
 
 async function seedDatabase() {
   try {
+    const fs = require('fs');
+    const path = require('path');
+    const schemaPath = path.join(__dirname, 'schema.sql');
+    if (fs.existsSync(schemaPath)) {
+      console.log('Applying schema from schema.sql...');
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+      await pool.query(schemaSql);
+      console.log('Schema applied successfully.');
+    }
+
+    // Run schema migrations
+    console.log('Running database migrations...');
+    await pool.query('ALTER TABLE shopping_lists ADD COLUMN IF NOT EXISTS shopping_date DATE;');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id VARCHAR(100) PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        body TEXT NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        is_read BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);');
+    console.log('PostgreSQL migrations completed.');
+
     const res = await pool.query('SELECT COUNT(*) FROM products');
     if (parseInt(res.rows[0].count, 10) === 0) {
       console.log('Seeding initial products into database...');
