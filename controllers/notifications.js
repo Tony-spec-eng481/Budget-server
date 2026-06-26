@@ -12,7 +12,7 @@ exports.getNotifications = async (req, res) => {
     
     // 2. Fetch all global promotions and left join read_promotions to check if this user has read them
     const promoResult = await db.query(
-      `SELECT p.id, p.title, p.body, p.created_at AS "createdAt",
+      `SELECT p.id, p.title, p.body, p.image_url AS "imageUrl", p.link_url AS "linkUrl", p.created_at AS "createdAt",
               CASE WHEN rp.user_id IS NOT NULL THEN TRUE ELSE FALSE END AS "isRead"
        FROM promotions p
        LEFT JOIN read_promotions rp ON p.id = rp.promotion_id AND rp.user_id = $1`,
@@ -33,6 +33,8 @@ exports.getNotifications = async (req, res) => {
       id: p.id,
       title: p.title,
       body: p.body,
+      imageUrl: p.imageUrl,
+      linkUrl: p.linkUrl,
       type: 'promotional',
       timestamp: new Date(p.createdAt).getTime(),
       isRead: p.isRead

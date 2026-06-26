@@ -104,6 +104,8 @@ async function seedDatabase() {
       );
     `);
     
+    await pool.query('ALTER TABLE promotions ADD COLUMN IF NOT EXISTS link_url TEXT;');
+    
     await pool.query(`
       CREATE TABLE IF NOT EXISTS read_promotions (
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,

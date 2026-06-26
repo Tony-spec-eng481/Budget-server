@@ -132,7 +132,11 @@ exports.deleteUser = async (req, res) => {
 exports.getProducts = async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT id, name, category, quantity, price_magunas AS "price" FROM products ORDER BY name ASC'
+      `SELECT p.id, p.name, p.category, p.quantity, p.price,
+              p.supermarket_id AS "supermarketId", s.name AS "supermarketName"
+       FROM products p
+       LEFT JOIN supermarkets s ON p.supermarket_id = s.id
+       ORDER BY p.name ASC`
     );
     const formatted = result.rows.map(p => ({ ...p, price: parseFloat(p.price) }));
     return res.json(formatted);
@@ -143,7 +147,7 @@ exports.getProducts = async (req, res) => {
 };
 
 exports.addProduct = async (req, res) => {
-  const { name, category, quantity, price } = req.body;
+  const { name, category, quantity, price, supermarketId } = req.body;
   if (!name || !category || !quantity || price === undefined) {
     return res.status(400).json({ error: 'Missing required product fields.' });
   }
@@ -152,13 +156,19 @@ exports.addProduct = async (req, res) => {
 
   try {
     const result = await db.query(
-      `INSERT INTO products (id, name, category, quantity, price_magunas)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, name, category, quantity, price_magunas AS "price"`,
-      [id, name, category, quantity, price]
+      `INSERT INTO products (id, name, category, quantity, price, supermarket_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, name, category, quantity, price, supermarket_id AS "supermarketId"`,
+      [id, name, category, quantity, price, supermarketId || null]
     );
     const p = result.rows[0];
-    return res.status(201).json({ ...p, price: parseFloat(p.price) });
+    // Fetch supermarket name
+    let supermarketName = null;
+    if (p.supermarketId) {
+      const sup = await db.query('SELECT name FROM supermarkets WHERE id = $1', [p.supermarketId]);
+      supermarketName = sup.rows[0]?.name || null;
+    }
+    return res.status(201).json({ ...p, price: parseFloat(p.price), supermarketName });
   } catch (error) {
     console.error('addProduct error:', error);
     return res.status(500).json({ error: 'Failed to add product to catalog.' });
@@ -167,7 +177,7 @@ exports.addProduct = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
-  const { name, category, quantity, price } = req.body;
+  const { name, category, quantity, price, supermarketId } = req.body;
 
   if (!name || !category || !quantity || price === undefined) {
     return res.status(400).json({ error: 'Missing required product fields.' });
@@ -176,10 +186,10 @@ exports.updateProduct = async (req, res) => {
   try {
     const result = await db.query(
       `UPDATE products 
-       SET name = $1, category = $2, quantity = $3, price_magunas = $4
-       WHERE id = $5
-       RETURNING id, name, category, quantity, price_magunas AS "price"`,
-      [name, category, quantity, price, id]
+       SET name = $1, category = $2, quantity = $3, price = $4, supermarket_id = $5
+       WHERE id = $6
+       RETURNING id, name, category, quantity, price, supermarket_id AS "supermarketId"`,
+      [name, category, quantity, price, supermarketId || null, id]
     );
 
     if (result.rows.length === 0) {
@@ -187,7 +197,12 @@ exports.updateProduct = async (req, res) => {
     }
 
     const p = result.rows[0];
-    return res.json({ ...p, price: parseFloat(p.price) });
+    let supermarketName = null;
+    if (p.supermarketId) {
+      const sup = await db.query('SELECT name FROM supermarkets WHERE id = $1', [p.supermarketId]);
+      supermarketName = sup.rows[0]?.name || null;
+    }
+    return res.json({ ...p, price: parseFloat(p.price), supermarketName });
   } catch (error) {
     console.error('updateProduct error:', error);
     return res.status(500).json({ error: 'Failed to update product.' });

@@ -9,13 +9,31 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Supermarkets table (admin-managed)
+CREATE TABLE IF NOT EXISTS supermarkets (
+  id VARCHAR(100) PRIMARY KEY,
+  name VARCHAR(255) UNIQUE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Supermarket locations (multiple per supermarket)
+CREATE TABLE IF NOT EXISTS supermarket_locations (
+  id VARCHAR(100) PRIMARY KEY,
+  supermarket_id VARCHAR(100) NOT NULL REFERENCES supermarkets(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  county VARCHAR(100),
+  town VARCHAR(100),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Supermarket Product Catalog
 CREATE TABLE IF NOT EXISTS products (
   id VARCHAR(100) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   category VARCHAR(100) NOT NULL,
   quantity VARCHAR(50) NOT NULL,
-  price_magunas NUMERIC(10, 2) NOT NULL DEFAULT 0
+  price NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  supermarket_id VARCHAR(100) REFERENCES supermarkets(id) ON DELETE SET NULL
 );
 
 -- Category-specific budgets
@@ -149,6 +167,7 @@ CREATE TABLE IF NOT EXISTS promotions (
   title VARCHAR(255) NOT NULL,
   body TEXT NOT NULL,
   image_url TEXT,
+  link_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -164,5 +183,35 @@ CREATE TABLE IF NOT EXISTS global_settings (
   key VARCHAR(100) PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+-- =============================================================
+-- MIGRATION SQL (run once on existing databases)
+-- =============================================================
+-- Run these statements if you are upgrading from the old schema
+-- that had price_magunas instead of price + supermarket_id.
+--
+-- Step 1: Create the supermarkets table and a default entry
+-- CREATE TABLE IF NOT EXISTS supermarkets (
+--   id VARCHAR(100) PRIMARY KEY,
+--   name VARCHAR(255) UNIQUE NOT NULL,
+--   location VARCHAR(255),
+--   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- );
+-- INSERT INTO supermarkets (id, name, location)
+--   VALUES ('sup_default', 'Default Supermarket', 'Kenya')
+--   ON CONFLICT DO NOTHING;
+--
+-- Step 2: Add new columns to products
+-- ALTER TABLE products ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) NOT NULL DEFAULT 0;
+-- ALTER TABLE products ADD COLUMN IF NOT EXISTS supermarket_id VARCHAR(100) REFERENCES supermarkets(id) ON DELETE SET NULL;
+--
+-- Step 3: Migrate price data from old column
+-- UPDATE products SET price = price_magunas WHERE price = 0;
+-- UPDATE products SET supermarket_id = 'sup_default';
+--
+-- Step 4: Drop old column (optional — only after verifying migration)
+-- ALTER TABLE products DROP COLUMN IF EXISTS price_magunas;
+-- =============================================================
+
 
 

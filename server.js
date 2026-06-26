@@ -10,6 +10,7 @@ const authMiddleware = require('./middleware/auth');
 const authController = require('./controllers/auth');
 const stocksController = require('./controllers/stocks');
 const supermarketsController = require('./controllers/supermarkets');
+const supermarketsAdminController = require('./controllers/supermarketsAdmin');
 const budgetsController = require('./controllers/budgets');
 const shoppingController = require('./controllers/shopping');
 const ordersController = require('./controllers/orders');
@@ -20,6 +21,11 @@ const adminAuthMiddleware = require('./middleware/adminAuth');
 const promotionsController = require('./controllers/promotions');
 const globalSettingsController = require('./controllers/globalSettings');
 
+const path = require('path');
+const fs = require('fs');
+
+const upload = require('./middleware/upload');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -28,6 +34,13 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Serve uploads statically
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadDir));
 
 // Routes
 
@@ -41,6 +54,7 @@ app.get('/api/stocks/news', stocksController.getNews);
 
 // 3. Supermarkets route
 app.get('/api/supermarkets/products', supermarketsController.getProducts);
+app.get('/api/supermarkets', supermarketsController.getSupermarkets);
 
 // 4. Budgets routes (Secured)
 app.get('/api/budgets', authMiddleware, budgetsController.getBudgets);
@@ -82,6 +96,18 @@ app.get('/api/global-settings', globalSettingsController.getSettings);
 
 // 10. Admin Portal routes
 app.post('/api/admin/auth/login', adminController.adminLogin);
+app.post('/api/admin/upload', adminAuthMiddleware, upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded.' });
+    }
+    const fileUrl = `/uploads/${req.file.filename}`;
+    return res.json({ success: true, url: fileUrl });
+  } catch (error) {
+    console.error('Upload error:', error);
+    return res.status(500).json({ error: 'File upload failed.' });
+  }
+});
 app.get('/api/admin/stats', adminAuthMiddleware, adminController.getStats);
 app.get('/api/admin/users', adminAuthMiddleware, adminController.getUsers);
 app.delete('/api/admin/users/:id', adminAuthMiddleware, adminController.deleteUser);
@@ -98,6 +124,12 @@ app.get('/api/admin/products', adminAuthMiddleware, adminController.getProducts)
 app.post('/api/admin/products', adminAuthMiddleware, adminController.addProduct);
 app.put('/api/admin/products/:id', adminAuthMiddleware, adminController.updateProduct);
 app.delete('/api/admin/products/:id', adminAuthMiddleware, adminController.deleteProduct);
+
+// Admin Supermarkets routes
+app.get('/api/admin/supermarkets', adminAuthMiddleware, supermarketsAdminController.getSupermarkets);
+app.post('/api/admin/supermarkets', adminAuthMiddleware, supermarketsAdminController.addSupermarket);
+app.put('/api/admin/supermarkets/:id', adminAuthMiddleware, supermarketsAdminController.updateSupermarket);
+app.delete('/api/admin/supermarkets/:id', adminAuthMiddleware, supermarketsAdminController.deleteSupermarket);
 
 app.get('/api/admin/receipts', adminAuthMiddleware, adminController.getReceipts);
 app.put('/api/admin/receipts/:id/status', adminAuthMiddleware, adminController.updateReceiptStatus);
