@@ -1,5 +1,23 @@
 const db = require('../db');
 
+const groupProducts = (rows) => {
+  const grouped = {};
+  for (const row of rows) {
+    const key = `${row.name.toLowerCase()}_${row.category.toLowerCase()}_${row.quantity.toLowerCase()}`;
+    if (!grouped[key]) {
+      grouped[key] = {
+        id: row.id,
+        name: row.name,
+        category: row.category,
+        quantity: row.quantity,
+        prices: {}
+      };
+    }
+    grouped[key].prices[row.supermarket_name || 'Default'] = parseFloat(row.price);
+  }
+  return Object.values(grouped);
+};
+
 exports.getProducts = async (req, res) => {
   try {
     const { query } = req.query;
@@ -26,33 +44,16 @@ exports.getProducts = async (req, res) => {
         );
       });
 
-      sql += conditions.join(' AND ') + ' ORDER BY p.name ASC LIMIT 10';
+      sql += conditions.join(' AND ') + ' ORDER BY p.name ASC LIMIT 100';
       const result = await db.query(sql, params);
-
-      const formatted = result.rows.map(row => ({
-        id: row.id,
-        name: row.name,
-        category: row.category,
-        quantity: row.quantity,
-        prices: {
-          [row.supermarket_name || 'Default']: parseFloat(row.price)
-        }
-      }));
-      return res.json(formatted);
+      const grouped = groupProducts(result.rows);
+      return res.json(grouped.slice(0, 10));
     }
 
     // Default: return all products
     const result = await db.query(baseSelect + ' ORDER BY p.name ASC');
-    const formatted = result.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      category: row.category,
-      quantity: row.quantity,
-      prices: {
-        [row.supermarket_name || 'Default']: parseFloat(row.price)
-      }
-    }));
-    return res.json(formatted);
+    const grouped = groupProducts(result.rows);
+    return res.json(grouped);
   } catch (error) {
     console.error('getProducts error:', error);
     return res.status(500).json({ error: 'Internal server error while fetching products.' });
